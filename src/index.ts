@@ -2,7 +2,7 @@
 
 import chalk from 'chalk';
 import commander from 'commander';
-import { flatten, unflatten } from 'flat';
+import * as flatten from 'flattenjs';
 import * as fs from 'fs';
 import { omit } from 'lodash';
 import * as path from 'path';
@@ -421,9 +421,9 @@ function createTranslator(
     );
     let cacheDiff: string[] = [];
     if (fs.existsSync(cachePath) && !fs.statSync(cachePath).isDirectory()) {
-      const cachedFile = flatten(
+      const cachedFile = flatten.convert(
         JSON.parse(fs.readFileSync(cachePath).toString().trim()),
-      ) as any;
+      );
       const cDiff = diff(cachedFile, sourceFile.content);
       cacheDiff = Object.keys(cDiff).filter((k) => cDiff[k]);
       const changedItems = Object.keys(cacheDiff).length.toString();
@@ -471,7 +471,7 @@ function createTranslator(
       const newContent =
         JSON.stringify(
           sourceFile.type === 'key-based'
-            ? unflatten(translatedFile, { object: true })
+            ? flatten.undo(translatedFile)
             : translatedFile,
           null,
           2,
