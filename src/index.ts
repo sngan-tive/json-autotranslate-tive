@@ -2,24 +2,24 @@
 
 import chalk from 'chalk';
 import commander from 'commander';
+import { diff } from 'deep-object-diff';
 import * as flatten from 'flattenjs';
 import * as fs from 'fs';
 import { omit } from 'lodash';
-import * as path from 'path';
-import { diff } from 'deep-object-diff';
 import ncp from 'ncp';
+import * as path from 'path';
 
+import { matcherMap } from './matchers';
 import { serviceMap, TranslationService } from './services';
 import {
-  loadTranslations,
-  getAvailableLanguages,
-  fixSourceInconsistencies,
   evaluateFilePath,
-  FileType,
+  fixSourceInconsistencies,
+  getAvailableLanguages,
+  loadTranslations,
   DirectoryStructure,
+  FileType,
   TranslatableFile,
 } from './util/file-system';
-import { matcherMap } from './matchers';
 
 require('dotenv').config();
 

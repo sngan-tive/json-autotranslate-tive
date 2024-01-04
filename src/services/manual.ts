@@ -1,14 +1,16 @@
 import inquirer from 'inquirer';
+
 import {
   replaceInterpolations,
   reInsertInterpolations,
   Matcher,
 } from '../matchers';
+
 import { TranslationService } from '.';
 
 export class ManualTranslation implements TranslationService {
   private interpolationMatcher: Matcher;
-  public name = 'Manual Translation';
+  name = 'Manual Translation';
 
   async initialize(config?, interpolationMatcher?: Matcher) {
     this.interpolationMatcher = interpolationMatcher;

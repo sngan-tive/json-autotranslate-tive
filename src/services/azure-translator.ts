@@ -1,13 +1,14 @@
-import fetch from 'node-fetch';
-import { chunk, flatten } from 'lodash';
 import { decode } from 'html-entities';
+import { chunk, flatten } from 'lodash';
+import fetch from 'node-fetch';
 
-import { TranslationService, TranslationResult, TString } from '.';
 import {
-  Matcher,
-  reInsertInterpolations,
   replaceInterpolations,
+  reInsertInterpolations,
+  Matcher,
 } from '../matchers';
+
+import { TranslationResult, TranslationService, TString } from '.';
 
 interface TranslationResponse {
   translations: [
@@ -34,7 +35,7 @@ const TRANSLATE_ENDPOINT =
   'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0';
 
 export class AzureTranslator implements TranslationService {
-  public name = 'Azure';
+  name = 'Azure';
   private apiKey: string;
   private region?: string;
   private interpolationMatcher: Matcher;
@@ -47,7 +48,9 @@ export class AzureTranslator implements TranslationService {
     decodeEscapes?: boolean,
   ) {
     const [apiKey, region] = config.split(',');
-    if (!apiKey) throw new Error(`Please provide an API key for Azure.`);
+    if (!apiKey) {
+      throw new Error(`Please provide an API key for Azure.`);
+    }
 
     this.apiKey = apiKey;
     this.region = region;

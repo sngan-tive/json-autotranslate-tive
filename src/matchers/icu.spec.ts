@@ -69,6 +69,8 @@ describe('ICU replacer', () => {
         to: '<span translate="no">4</span>',
       },
     ]);
-    expect(reInsertInterpolations(clean, replacements)).toEqual('{count} {count, plural, =1 {one person} =2 {two people} other {many people}}')
+    expect(reInsertInterpolations(clean, replacements)).toEqual(
+      '{count} {count, plural, =1 {one person} =2 {two people} other {many people}}',
+    );
   });
 });

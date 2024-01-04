@@ -1,100 +1,106 @@
 import { Translate } from '@aws-sdk/client-translate';
-import { decode } from 'html-entities';
-import { TranslationService, TString } from '.';
-import {
-  Matcher, reInsertInterpolations, replaceInterpolations
-} from '../matchers';
 import fs from 'fs';
+import { decode } from 'html-entities';
+
+import {
+  replaceInterpolations,
+  reInsertInterpolations,
+  Matcher,
+} from '../matchers';
+
+import { TranslationService, TString } from '.';
 export class AmazonTranslate implements TranslationService {
   private translate: Translate;
   private interpolationMatcher: Matcher;
   private supportedLanguages: object = {
-    'af': 'af',
-    'sq': 'sq',
-    'am': 'am',
-    'ar': 'ar',
-    'hy': 'hy',
-    'az': 'az',
-    'bn': 'bn',
-    'bs': 'bs',
-    'bg': 'bg',
-    'ca': 'ca',
-    'zh': 'zh',
+    af: 'af',
+    sq: 'sq',
+    am: 'am',
+    ar: 'ar',
+    hy: 'hy',
+    az: 'az',
+    bn: 'bn',
+    bs: 'bs',
+    bg: 'bg',
+    ca: 'ca',
+    zh: 'zh',
     'zh-tw': 'zh-TW',
-    'hr': 'hr',
-    'cs': 'cs',
-    'da': 'da',
+    hr: 'hr',
+    cs: 'cs',
+    da: 'da',
     'fa-af': 'fa-AF',
-    'nl': 'nl',
-    'en': 'en',
-    'et': 'et',
-    'fa': 'fa',
-    'tl': 'tl',
-    'fi': 'fi',
-    'fr': 'fr',
+    nl: 'nl',
+    en: 'en',
+    et: 'et',
+    fa: 'fa',
+    tl: 'tl',
+    fi: 'fi',
+    fr: 'fr',
     'fr-ca': 'fr-CA',
-    'ka': 'ka',
-    'de': 'de',
-    'el': 'el',
-    'gu': 'gu',
-    'ht': 'ht',
-    'ha': 'ha',
-    'he': 'he',
-    'hi': 'hi',
-    'hu': 'hu',
-    'is': 'is',
-    'id': 'id',
-    'ga': 'ga',
-    'it': 'it',
-    'ja': 'ja',
-    'kn': 'kn',
-    'kk': 'kk',
-    'ko': 'ko',
-    'lv': 'lv',
-    'lt': 'lt',
-    'mk': 'mk',
-    'ms': 'ms',
-    'ml': 'ml',
-    'mt': 'mt',
-    'mr': 'mr',
-    'mn': 'mn',
-    'no': 'no',
-    'ps': 'ps',
-    'pl': 'pl',
-    'pt': 'pt',
+    ka: 'ka',
+    de: 'de',
+    el: 'el',
+    gu: 'gu',
+    ht: 'ht',
+    ha: 'ha',
+    he: 'he',
+    hi: 'hi',
+    hu: 'hu',
+    is: 'is',
+    id: 'id',
+    ga: 'ga',
+    it: 'it',
+    ja: 'ja',
+    kn: 'kn',
+    kk: 'kk',
+    ko: 'ko',
+    lv: 'lv',
+    lt: 'lt',
+    mk: 'mk',
+    ms: 'ms',
+    ml: 'ml',
+    mt: 'mt',
+    mr: 'mr',
+    mn: 'mn',
+    no: 'no',
+    ps: 'ps',
+    pl: 'pl',
+    pt: 'pt',
     'pt-pt': 'pt-PT',
-    'pa': 'pa',
-    'ro': 'ro',
-    'ru': 'ru',
-    'sr': 'sr',
-    'si': 'si',
-    'sk': 'sk',
-    'sl': 'sl',
-    'so': 'so',
-    'es': 'es',
+    pa: 'pa',
+    ro: 'ro',
+    ru: 'ru',
+    sr: 'sr',
+    si: 'si',
+    sk: 'sk',
+    sl: 'sl',
+    so: 'so',
+    es: 'es',
     'es-mx': 'es-MX',
-    'sw': 'sw',
-    'sv': 'sv',
-    'ta': 'ta',
-    'te': 'te',
-    'th': 'th',
-    'tr': 'tr',
-    'uk': 'uk',
-    'ur': 'ur',
-    'uz': 'uz',
-    'vi': 'vi',
-    'cy': 'cy',
+    sw: 'sw',
+    sv: 'sv',
+    ta: 'ta',
+    te: 'te',
+    th: 'th',
+    tr: 'tr',
+    uk: 'uk',
+    ur: 'ur',
+    uz: 'uz',
+    vi: 'vi',
+    cy: 'cy',
   };
   private decodeEscapes: boolean;
 
-  public name = 'Amazon Translate';
+  name = 'Amazon Translate';
 
   async initialize(
     config?: string,
     interpolationMatcher?: Matcher,
     decodeEscapes?: boolean,
   ) {
-    const configJson = config ? JSON.parse(fs.readFileSync(config).toString()) : {};
+    const configJson = config
+      ? JSON.parse(fs.readFileSync(config).toString())
+      : {};
     this.translate = new Translate(configJson);
 
     this.interpolationMatcher = interpolationMatcher;
@@ -102,7 +108,9 @@ export class AmazonTranslate implements TranslationService {
   }
 
   supportsLanguage(language: string) {
-    return Object.keys(this.supportedLanguages).includes(language.toLowerCase());
+    return Object.keys(this.supportedLanguages).includes(
+      language.toLowerCase(),
+    );
   }
 
   async translateStrings(strings: TString[], from: string, to: string) {
@@ -119,11 +127,14 @@ export class AmazonTranslate implements TranslationService {
           TargetLanguageCode: this.supportedLanguages[to.toLowerCase()],
         });
 
-        const reInsterted = reInsertInterpolations(TranslatedText, replacements);
+        const reInsterted = reInsertInterpolations(
+          TranslatedText,
+          replacements,
+        );
 
         return {
-          key: key,
-          value: value,
+          key,
+          value,
           translated: this.decodeEscapes ? decode(reInsterted) : reInsterted,
         };
       }),

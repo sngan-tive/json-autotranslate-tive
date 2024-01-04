@@ -1,15 +1,16 @@
 import { decode } from 'html-entities';
 import fetch from 'node-fetch';
 
-import { TranslationService, TranslationResult } from '.';
 import {
   replaceInterpolations,
   reInsertInterpolations,
   Matcher,
 } from '../matchers';
 
+import { TranslationResult, TranslationService } from '.';
+
 export class DeepL implements TranslationService {
-  public name: string;
+  name: string;
   private apiEndpoint: string;
 
   /**
@@ -17,7 +18,7 @@ export class DeepL implements TranslationService {
    * @param useFreeApi Use the free vs paid api
    */
   constructor(useFreeApi: boolean) {
-    if(useFreeApi) {
+    if (useFreeApi) {
       this.name = 'DeepL Free';
       this.apiEndpoint = 'https://api-free.deepl.com/v2';
     } else {
@@ -149,6 +150,7 @@ export class DeepL implements TranslationService {
     };
     if (this.supportsFormality(to)) {
       // only append formality to avoid bad request error from deepl for languages with unsupported formality
+      // tslint:disable-next-line:no-string-literal
       body['formality'] = this.formality;
     }
 
@@ -186,11 +188,11 @@ export class DeepL implements TranslationService {
 
     // match the strings to be translated with their retrieved translations
     for (let index = 0; index < strings.length; index++) {
-      const string = strings[index];
+      const str = strings[index];
       const t = await translated[index];
       result.push({
-        key: string.key,
-        value: string.value,
+        key: str.key,
+        value: str.value,
         translated: this.decodeEscapes ? decode(t) : t,
       });
     }

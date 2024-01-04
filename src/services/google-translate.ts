@@ -1,10 +1,12 @@
 import { v2 } from '@google-cloud/translate';
 import { decode } from 'html-entities';
+
 import {
   replaceInterpolations,
   reInsertInterpolations,
   Matcher,
 } from '../matchers';
+
 import { TranslationService, TString } from '.';
 
 // Contains replacements for language codes
@@ -19,7 +21,7 @@ export class GoogleTranslate implements TranslationService {
   private supportedLanguages: string[] = [];
   private decodeEscapes: boolean;
 
-  public name = 'Google Translate';
+  name = 'Google Translate';
 
   cleanResponse(response: string) {
     const translated = response.replace(
@@ -78,8 +80,8 @@ export class GoogleTranslate implements TranslationService {
         });
 
         return {
-          key: key,
-          value: value,
+          key,
+          value,
           translated: this.cleanResponse(
             reInsertInterpolations(translationResult, replacements),
           ),

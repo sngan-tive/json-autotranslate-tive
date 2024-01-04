@@ -1,10 +1,11 @@
-import { GoogleTranslate } from './google-translate';
+import { Matcher } from '../matchers';
+
+import { AmazonTranslate } from './amazon-translate';
+import { AzureTranslator } from './azure-translator';
 import { DeepL } from './deepl';
 import { DryRun } from './dry-run';
-import { AzureTranslator } from './azure-translator';
+import { GoogleTranslate } from './google-translate';
 import { ManualTranslation } from './manual';
-import { Matcher } from '../matchers';
-import { AmazonTranslate } from './amazon-translate';
 
 export interface TranslationResult {
   key: string;

@@ -1,8 +1,9 @@
-import { TranslationService, TString } from '.';
 import chalk from 'chalk';
 
+import { TranslationService, TString } from '.';
+
 export class DryRun implements TranslationService {
-  public name = 'Dry Run';
+  name = 'Dry Run';
 
   async initialize() {}
 
