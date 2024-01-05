@@ -29,6 +29,7 @@ export interface TranslationService {
     strings: TString[],
     from: string,
     to: string,
+    terminology: string,
   ) => Promise<TranslationResult[]>;
 }
 

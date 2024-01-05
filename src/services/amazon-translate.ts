@@ -113,19 +113,32 @@ export class AmazonTranslate implements TranslationService {
     );
   }
 
-  async translateStrings(strings: TString[], from: string, to: string) {
+  async translateStrings(
+    strings: TString[],
+    from: string,
+    to: string,
+    terminology: string,
+  ) {
     return Promise.all(
       strings.map(async ({ key, value }) => {
         const { clean, replacements } = replaceInterpolations(
           value,
           this.interpolationMatcher,
         );
-
-        const { TranslatedText } = await this.translate.translateText({
+        const translateTextConfig = {
           Text: clean,
           SourceLanguageCode: this.supportedLanguages[from.toLowerCase()],
           TargetLanguageCode: this.supportedLanguages[to.toLowerCase()],
-        });
+          TerminologyNames: [],
+        };
+
+        if (terminology) {
+          translateTextConfig.TerminologyNames.push(terminology);
+        }
+
+        const { TranslatedText } = await this.translate.translateText(
+          translateTextConfig,
+        );
 
         const reInsterted = reInsertInterpolations(
           TranslatedText,

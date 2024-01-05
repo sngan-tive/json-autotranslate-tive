@@ -21,6 +21,7 @@ import {
   TranslatableFile,
 } from './util/file-system';
 
+// tslint:disable-next-line:no-var-requires
 require('dotenv').config();
 
 commander
@@ -77,6 +78,10 @@ commander
     '--decode-escapes',
     'decodes escaped HTML entities like &#39; into normal UTF-8 characters',
   )
+  .option(
+    '--terminology <terminology>',
+    'define terminology to be used with AWS Translate',
+  )
   .parse(process.argv);
 
 const translate = async (
@@ -90,6 +95,7 @@ const translate = async (
   service: keyof typeof serviceMap = 'google-translate',
   matcher: keyof typeof matcherMap = 'icu',
   decodeEscapes = false,
+  terminology: string,
   config?: string,
 ) => {
   const workingDir = path.resolve(process.cwd(), inputDir);
@@ -268,6 +274,7 @@ const translate = async (
       workingDir,
       dirStructure,
       deleteUnusedStrings,
+      terminology,
     );
 
     switch (dirStructure) {
@@ -391,6 +398,7 @@ translate(
   commander.service,
   commander.matcher,
   commander.decodeEscapes,
+  commander.terminology,
   commander.config,
 ).catch((e: Error) => {
   console.log();
@@ -410,6 +418,7 @@ function createTranslator(
   workingDir: string,
   dirStructure: DirectoryStructure,
   deleteUnusedStrings: boolean,
+  terminology: string,
 ) {
   return async (
     sourceFile: TranslatableFile,
@@ -451,6 +460,7 @@ function createTranslator(
       stringsToTranslate,
       sourceLang,
       targetLang,
+      terminology,
     );
 
     const newKeys = translatedStrings.reduce(
