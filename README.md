@@ -138,6 +138,10 @@ As of this release, json-autotranslate offers five services:
   to translate strings)
 - **amazon-translate** (uses
   [Amazon Translate](https://aws.amazon.com/translate/) to translate strings)
+- **amazon-translate-bedrock** (uses
+  [Amazon Translate](https://aws.amazon.com/translate/) for initial translation,
+  then [Amazon Bedrock](https://aws.amazon.com/bedrock/) to refine translations
+  for grammar, tone, and naturalness)
 - **manual** (allows you to translate strings manually by entering them into the
   CLI)
 - **dry-run** (outputs a list of strings that will be translated without
@@ -269,6 +273,91 @@ At a minimum, this must include the AWS region.
 Amazon Translate offers a free tier, but is paid after that. See their
 [pricing](https://aws.amazon.com/translate/pricing/) page for details.
 
+### Amazon Translate + Bedrock
+
+This service extends **amazon-translate** with a post-translation refinement step
+powered by [Amazon Bedrock](https://aws.amazon.com/bedrock/). After translating
+strings with Amazon Translate, the results are sent to a Claude model on Bedrock
+which refines the translations by fixing grammar, improving tone, and correcting
+overly-literal phrasings.
+
+#### Prerequisites
+
+- Complete the [Amazon Translate](#amazon-translate) setup above
+- [Request access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)
+  to your chosen Claude model in the Amazon Bedrock console. Your IAM user or
+  role must have `bedrock:InvokeModel` permission. A policy like the following
+  should work:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "comprehend:DetectDominantLanguage",
+                "translate:TranslateText",
+                "bedrock:InvokeModel"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+#### Usage
+
+With all defaults:
+
+```shell
+$ yarn json-autotranslate -i locales -s amazon-translate-bedrock
+```
+
+With custom terminology and overrides:
+
+```shell
+$ yarn json-autotranslate -i locales -s amazon-translate-bedrock \
+    --terminology my-terms \
+    --bedrock-region us-west-2 \
+    --bedrock-model-id anthropic.claude-3-sonnet-20240229-v1:0 \
+    --bedrock-batch-size 25 \
+    --bedrock-max-tokens 8192
+```
+
+You can optionally pass `--config` with a JSON file to configure the AWS
+Translate client (e.g., to set a specific region or credentials), same as the
+**amazon-translate** service.
+
+#### Bedrock Options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--bedrock-region` | `us-east-1` | AWS region for the Bedrock API. Falls back to the region in `--config` if provided. |
+| `--bedrock-model-id` | `us.anthropic.claude-sonnet-4-20250514-v1:0` | The Bedrock model ID to use for refinement. |
+| `--bedrock-batch-size` | `50` | Number of strings sent to Bedrock per refinement request. Decrease if you hit token limits on large strings. |
+| `--bedrock-max-tokens` | `4096` | Maximum tokens for the Bedrock response. Increase for large batches or verbose languages. |
+| `--bedrock-min-length` | `0` (disabled) | Skip Bedrock refinement for strings shorter than this many characters. Disabled by default since caching means only changed strings are processed. Set to e.g. `4` for a cold-cache bulk run to skip single words. |
+
+#### How It Works
+
+1. All strings are first translated using Amazon Translate (with terminology
+   support if `--terminology` is provided).
+2. The translated strings are batched and sent to the Bedrock model with a prompt
+   that instructs it to refine grammar, tone, and overly-literal translations.
+3. Interpolation placeholders (e.g., `{{name}}`, `{count}`, `%s`) are validated
+   after refinement. If a placeholder is corrupted, the unrefined translation is
+   used for that string.
+4. If Bedrock fails for any batch (e.g., throttling, model error), the unrefined
+   Amazon Translate output is used as a fallback.
+
+#### Pricing
+
+You will be charged separately for Amazon Translate and Amazon Bedrock usage.
+See the [Amazon Translate pricing](https://aws.amazon.com/translate/pricing/)
+and [Amazon Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) pages for
+details.
+
 ### Manual
 
 This service doesn't require any configuration. You will be prompted to
@@ -308,8 +397,14 @@ Options:
   -f, --fix-inconsistencies                     automatically fixes inconsistent key-value pairs by setting the value to the key
   -d, --delete-unused-strings                   deletes strings in translation files that don't exist in the template
   -h, --help                                    output usage information
-  --directory-structure <default|ngx-translate> the locale directory structure (default: "default")
-  --decode-escapes                              decodes escaped HTML entities like &#39; into normal UTF-8 characters
+  --directory-structure <default|ngx-translate>  the locale directory structure (default: "default")
+  --decode-escapes                               decodes escaped HTML entities like &#39; into normal UTF-8 characters
+  --terminology <terminology>                    define terminology to be used with AWS Translate
+  --bedrock-region <region>                      AWS region for Bedrock (default: "us-east-1")
+  --bedrock-model-id <modelId>                   Bedrock model ID (default: "us.anthropic.claude-sonnet-4-20250514-v1:0")
+  --bedrock-batch-size <batchSize>               strings per Bedrock refinement batch (default: 50)
+  --bedrock-max-tokens <maxTokens>               max tokens for Bedrock response (default: 4096)
+  --bedrock-min-length <minLength>               skip Bedrock refinement for short strings (default: 0)
 ```
 
 ## Contributing
