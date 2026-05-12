@@ -24,6 +24,7 @@ const DEFAULT_MODEL_ID = 'us.anthropic.claude-sonnet-4-20250514-v1:0';
 const DEFAULT_BATCH_SIZE = 50;
 const DEFAULT_MAX_TOKENS = 4096;
 const DEFAULT_MIN_REFINEMENT_LENGTH = 0;
+const TRANSLATE_CONCURRENCY = 10;
 
 const SYSTEM_PROMPT = `You are a professional translator and editor. You refine machine-translated text to improve naturalness, grammar, and tone while preserving the original meaning.
 
@@ -168,38 +169,50 @@ export class AmazonTranslateBedrock implements TranslationService {
       return [];
     }
 
-    // Phase 1: AWS Translate
-    const translateResults = await Promise.all(
-      strings.map(async ({ key, value }) => {
-        const { clean, replacements } = replaceInterpolations(
-          value,
-          this.interpolationMatcher,
-        );
+    // Phase 1: AWS Translate (concurrency-limited to avoid throttling)
+    const total = strings.length;
+    const translateResults: TranslationResult[] = [];
+    for (let i = 0; i < strings.length; i += TRANSLATE_CONCURRENCY) {
+      const done = Math.min(i + TRANSLATE_CONCURRENCY, total);
+      process.stdout.write(`\r   [Translate] ${done}/${total} strings`);
+      const chunk = strings.slice(i, i + TRANSLATE_CONCURRENCY);
+      const chunkResults = await Promise.all(
+        chunk.map(async ({ key, value }) => {
+          const { clean, replacements } = replaceInterpolations(
+            value,
+            this.interpolationMatcher,
+          );
 
-        const translateTextConfig = {
-          Text: clean,
-          SourceLanguageCode: SUPPORTED_LANGUAGES[from.toLowerCase()],
-          TargetLanguageCode: SUPPORTED_LANGUAGES[to.toLowerCase()],
-          TerminologyNames: [] as string[],
-        };
+          const translateTextConfig = {
+            Text: clean,
+            SourceLanguageCode: SUPPORTED_LANGUAGES[from.toLowerCase()],
+            TargetLanguageCode: SUPPORTED_LANGUAGES[to.toLowerCase()],
+            TerminologyNames: [] as string[],
+          };
 
-        if (terminology) {
-          translateTextConfig.TerminologyNames.push(terminology);
-        }
+          if (terminology) {
+            translateTextConfig.TerminologyNames.push(terminology);
+          }
 
-        const { TranslatedText } = await this.translate.translateText(
-          translateTextConfig,
-        );
+          const { TranslatedText } = await this.translate.translateText(
+            translateTextConfig,
+          );
 
-        const reInserted = reInsertInterpolations(TranslatedText, replacements);
+          const reInserted = reInsertInterpolations(
+            TranslatedText,
+            replacements,
+          );
 
-        return {
-          key,
-          value,
-          translated: this.decodeEscapes ? decode(reInserted) : reInserted,
-        };
-      }),
-    );
+          return {
+            key,
+            value,
+            translated: this.decodeEscapes ? decode(reInserted) : reInserted,
+          };
+        }),
+      );
+      translateResults.push(...chunkResults);
+    }
+    process.stdout.write('\n');
 
     // Phase 2: Bedrock Refinement (skip short strings)
     const toRefine: TranslationResult[] = [];
@@ -236,12 +249,18 @@ export class AmazonTranslateBedrock implements TranslationService {
     to: string,
   ): Promise<TranslationResult[]> {
     const refined: TranslationResult[] = [];
+    const totalBatches = Math.ceil(results.length / this.batchSize);
 
     for (let i = 0; i < results.length; i += this.batchSize) {
+      const batchNum = Math.floor(i / this.batchSize) + 1;
+      process.stdout.write(
+        `\r   [Bedrock] Refining batch ${batchNum}/${totalBatches}`,
+      );
       const chunk = results.slice(i, i + this.batchSize);
       const refinedChunk = await this.refineBatch(chunk, from, to);
       refined.push(...refinedChunk);
     }
+    process.stdout.write('\n');
 
     return refined;
   }
