@@ -10,7 +10,7 @@ import ncp from 'ncp';
 import * as path from 'path';
 
 import { matcherMap } from './matchers';
-import { serviceMap, TranslationService } from './services';
+import { serviceMap, ServiceOptions, TranslationService } from './services';
 import {
   evaluateFilePath,
   fixSourceInconsistencies,
@@ -82,6 +82,26 @@ commander
     '--terminology <terminology>',
     'define terminology to be used with AWS Translate',
   )
+  .option(
+    '--bedrock-region <region>',
+    'AWS region for Bedrock (default: us-east-1)',
+  )
+  .option(
+    '--bedrock-model-id <modelId>',
+    'Bedrock model ID (default: us.anthropic.claude-sonnet-4-20250514-v1:0)',
+  )
+  .option(
+    '--bedrock-batch-size <batchSize>',
+    'number of strings per Bedrock refinement batch (default: 50)',
+  )
+  .option(
+    '--bedrock-max-tokens <maxTokens>',
+    'max tokens for Bedrock response (default: 4096)',
+  )
+  .option(
+    '--bedrock-min-length <minLength>',
+    'skip Bedrock refinement for strings shorter than this (default: 4)',
+  )
   .parse(process.argv);
 
 const translate = async (
@@ -97,6 +117,7 @@ const translate = async (
   decodeEscapes = false,
   terminology: string,
   config?: string,
+  serviceOptions?: ServiceOptions,
 ) => {
   const workingDir = path.resolve(process.cwd(), inputDir);
   const resolvedCacheDir = path.resolve(process.cwd(), cacheDir);
@@ -156,6 +177,7 @@ const translate = async (
     config,
     matcherMap[matcher],
     decodeEscapes,
+    serviceOptions,
   );
   console.log(chalk`└── {green.bold Done}`);
   console.log();
@@ -400,6 +422,13 @@ translate(
   commander.decodeEscapes,
   commander.terminology,
   commander.config,
+  {
+    bedrockRegion: commander.bedrockRegion,
+    bedrockModelId: commander.bedrockModelId,
+    bedrockBatchSize: commander.bedrockBatchSize,
+    bedrockMaxTokens: commander.bedrockMaxTokens,
+    bedrockMinLength: commander.bedrockMinLength,
+  },
 ).catch((e: Error) => {
   console.log();
   console.log(chalk.bgRed('An error has occurred:'));

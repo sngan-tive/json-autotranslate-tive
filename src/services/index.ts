@@ -1,6 +1,7 @@
 import { Matcher } from '../matchers';
 
 import { AmazonTranslate } from './amazon-translate';
+import { AmazonTranslateBedrock } from './amazon-translate-bedrock';
 import { AzureTranslator } from './azure-translator';
 import { DeepL } from './deepl';
 import { DryRun } from './dry-run';
@@ -17,12 +18,17 @@ export interface TString {
   key: string;
   value: string;
 }
+export interface ServiceOptions {
+  [key: string]: unknown;
+}
+
 export interface TranslationService {
   name: string;
   initialize: (
     config?: string,
     interpolationMatcher?: Matcher,
     decodeEscapes?: boolean,
+    options?: ServiceOptions,
   ) => Promise<void>;
   supportsLanguage: (language: string) => boolean;
   translateStrings: (
@@ -43,4 +49,5 @@ export const serviceMap: {
   azure: new AzureTranslator(),
   manual: new ManualTranslation(),
   'amazon-translate': new AmazonTranslate(),
+  'amazon-translate-bedrock': new AmazonTranslateBedrock(),
 };
