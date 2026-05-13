@@ -351,13 +351,6 @@ Translate client (e.g., to set a specific region or credentials), same as the
 4. If Bedrock fails for any batch (e.g., throttling, model error), the unrefined
    Amazon Translate output is used as a fallback.
 
-#### Pricing
-
-You will be charged separately for Amazon Translate and Amazon Bedrock usage.
-See the [Amazon Translate pricing](https://aws.amazon.com/translate/pricing/)
-and [Amazon Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) pages for
-details.
-
 ### Manual
 
 This service doesn't require any configuration. You will be prompted to
