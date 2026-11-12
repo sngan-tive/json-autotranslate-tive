@@ -15,6 +15,8 @@ type TranslationResult = { key: string; value: string; translated: string };
 // Limits parallel TranslateText calls to avoid ThrottlingException
 const TRANSLATE_CONCURRENCY = 10;
 const MAX_ATTEMPTS = 10;
+// Log progress every N strings (plain lines, since CI logs don't render \r)
+const PROGRESS_LOG_INTERVAL = 100;
 
 export class AmazonTranslate implements TranslationService {
   private translate: Translate;
@@ -167,6 +169,15 @@ export class AmazonTranslate implements TranslationService {
         }),
       );
       results.push(...chunkResults);
+
+      const done = results.length;
+      if (
+        done === strings.length ||
+        Math.floor(done / PROGRESS_LOG_INTERVAL) >
+          Math.floor((done - chunkResults.length) / PROGRESS_LOG_INTERVAL)
+      ) {
+        console.log(`   [Translate ${to}] ${done}/${strings.length} strings`);
+      }
     }
     return results;
   }
