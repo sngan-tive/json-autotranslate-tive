@@ -9,6 +9,13 @@ import {
 } from '../matchers';
 
 import { TranslationService, TString } from '.';
+
+type TranslationResult = { key: string; value: string; translated: string };
+
+// Limits parallel TranslateText calls to avoid ThrottlingException
+const TRANSLATE_CONCURRENCY = 10;
+const MAX_ATTEMPTS = 10;
+
 export class AmazonTranslate implements TranslationService {
   private translate: Translate;
   private interpolationMatcher: Matcher;
@@ -101,7 +108,11 @@ export class AmazonTranslate implements TranslationService {
     const configJson = config
       ? JSON.parse(fs.readFileSync(config).toString())
       : {};
-    this.translate = new Translate(configJson);
+    this.translate = new Translate({
+      maxAttempts: MAX_ATTEMPTS,
+      retryMode: 'adaptive',
+      ...configJson,
+    });
 
     this.interpolationMatcher = interpolationMatcher;
     this.decodeEscapes = decodeEscapes;
@@ -119,38 +130,44 @@ export class AmazonTranslate implements TranslationService {
     to: string,
     terminology: string,
   ) {
-    return Promise.all(
-      strings.map(async ({ key, value }) => {
-        const { clean, replacements } = replaceInterpolations(
-          value,
-          this.interpolationMatcher,
-        );
-        const translateTextConfig = {
-          Text: clean,
-          SourceLanguageCode: this.supportedLanguages[from.toLowerCase()],
-          TargetLanguageCode: this.supportedLanguages[to.toLowerCase()],
-          TerminologyNames: [],
-        };
+    const results: TranslationResult[] = [];
+    for (let i = 0; i < strings.length; i += TRANSLATE_CONCURRENCY) {
+      const chunk = strings.slice(i, i + TRANSLATE_CONCURRENCY);
+      const chunkResults = await Promise.all(
+        chunk.map(async ({ key, value }) => {
+          const { clean, replacements } = replaceInterpolations(
+            value,
+            this.interpolationMatcher,
+          );
+          const translateTextConfig = {
+            Text: clean,
+            SourceLanguageCode: this.supportedLanguages[from.toLowerCase()],
+            TargetLanguageCode: this.supportedLanguages[to.toLowerCase()],
+            TerminologyNames: [],
+          };
 
-        if (terminology) {
-          translateTextConfig.TerminologyNames.push(terminology);
-        }
+          if (terminology) {
+            translateTextConfig.TerminologyNames.push(terminology);
+          }
 
-        const { TranslatedText } = await this.translate.translateText(
-          translateTextConfig,
-        );
+          const { TranslatedText } = await this.translate.translateText(
+            translateTextConfig,
+          );
 
-        const reInsterted = reInsertInterpolations(
-          TranslatedText,
-          replacements,
-        );
+          const reInsterted = reInsertInterpolations(
+            TranslatedText,
+            replacements,
+          );
 
-        return {
-          key,
-          value,
-          translated: this.decodeEscapes ? decode(reInsterted) : reInsterted,
-        };
-      }),
-    );
+          return {
+            key,
+            value,
+            translated: this.decodeEscapes ? decode(reInsterted) : reInsterted,
+          };
+        }),
+      );
+      results.push(...chunkResults);
+    }
+    return results;
   }
 }
